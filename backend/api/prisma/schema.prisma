@@ -26,4 +26,48 @@ model User{
   role        Role        @default(CUSTOMER)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  driver      Driver?
+  restaurant  Restaurant?
 }
+
+model Restaurant{
+  id          String     @id @default(uuid())
+  name        String
+  address     String
+  phoneNumber       String
+  logoUrl     String
+  headerImageUrl  String
+  rating      Float?
+  deliveryTimeMin Int
+  deliveryTimeMax Int
+  isOpen      Boolean @default(true)
+  userId      String  @unique
+  isApprove   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+
+  owner       User     @relation(fields: [userId], references: [id])
+
+}
+
+model Driver{
+  id          String     @id @default(uuid())
+  userId      String  @unique
+  phoneNumber String  @unique
+  personalImage String
+  vehicleType String
+  licensePlate String @unique
+  rating      Float?
+  isAvailable Boolean @default(false)
+  isApproved  Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  
+
+
+  user        User    @relation(fields: [userId], references: [id])
+  
+}
+
