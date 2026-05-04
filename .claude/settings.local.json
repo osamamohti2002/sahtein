@@ -6,7 +6,8 @@
       "Bash(dir generated\\\\prisma)",
       "Bash(ls -la generated/prisma/)",
       "Bash(dir \"generated\\\\prisma\")",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(npm install *)"
     ]
   }
 }
