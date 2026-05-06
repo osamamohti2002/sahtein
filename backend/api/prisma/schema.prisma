@@ -28,7 +28,20 @@ model User{
   updatedAt   DateTime @updatedAt
   driver      Driver?
   restaurant  Restaurant?
+
+  refreshTokens RefreshToken[]
 }
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 
 model Restaurant{
   id          String     @id @default(uuid())
@@ -64,9 +77,6 @@ model Driver{
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  
-
-
   user        User    @relation(fields: [userId], references: [id])
   
 }
