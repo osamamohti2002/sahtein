@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpCode, Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginAuthDto } from './dto/login-auth-dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,6 +41,35 @@ export class AuthService {
 
   }
   async login(loginAuthDto: LoginAuthDto){
-    return "login auth";
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: loginAuthDto.email
+      }
+    });
+
+    if(!user){
+      throw new BadRequestException("This user doesn't exist!");
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginAuthDto.password,
+      user.password
+    );
+
+    if(!isPasswordValid){
+      throw new BadRequestException("Invalid Password!")
+    };
+
+    const payload = {
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+    return{
+      message: "User logined successfully!",
+      user: payload,
+      token: "token"
+    }
   }
 }
