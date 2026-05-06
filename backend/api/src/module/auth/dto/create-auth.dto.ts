@@ -16,6 +16,4 @@ export class CreateAuthDto {
   @MinLength(6)
   password: string;
 
-  @IsNotEmpty()
-  role: Role;
 }
