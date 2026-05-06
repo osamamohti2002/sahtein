@@ -1,15 +1,16 @@
-import { BadRequestException, HttpCode, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginAuthDto } from './dto/login-auth-dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
 
 
 @Injectable()
 export class AuthService {
 
-  constructor(private readonly prisma: PrismaService){}
+  constructor(private readonly prisma: PrismaService, private readonly jwtService: JwtService){}
 
 
   async create(data: CreateAuthDto) {
@@ -35,7 +36,7 @@ export class AuthService {
 
     return{
       message: "User created successfully",
-      user: newUser
+      user: {newUser, exclude: ["password"]}
     }
 
 
@@ -66,10 +67,39 @@ export class AuthService {
       email: user.email,
       role: user.role
     };
+    const tokens = await this.generateTokens(payload, user.id);
     return{
       message: "User logined successfully!",
       user: payload,
-      token: "token"
+      ...tokens
     }
+  }
+
+  private async generateTokens(payload: { sub: string; name: string; email: string; role: Role }, userId: string) {
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '15m'
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '7d'
+    });
+
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    
+    await this.prisma.refreshToken.create({
+      data: {
+        token: hashedRefreshToken,
+        userId: userId,
+        expiresAt: expiresAt
+      }
+    })
+
+    return {
+      accessToken,
+      refreshToken
+    };
   }
 }
