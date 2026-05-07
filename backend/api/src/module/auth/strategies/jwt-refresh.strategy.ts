@@ -46,6 +46,6 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
             throw new BadRequestException("Refresh token has expired!")
         }
 
-        return { userId: payLoad.sub, ...payLoad };
+        return { userId: payLoad.sub, refreshToken: refreshtoken, ...payLoad,};
     }
 }

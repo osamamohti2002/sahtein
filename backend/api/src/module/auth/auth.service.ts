@@ -102,4 +102,69 @@ export class AuthService {
       refreshToken
     };
   }
+
+  async refreshTokens(userId: string, refreshToken: string){
+    const currentUser = await this.prisma.user.findUnique({
+      where:{
+        id: userId
+      }
+    });
+
+    if(!currentUser){
+      throw new BadRequestException('User not found!')
+    };
+
+    const storedToken = await this.prisma.refreshToken.findFirst({
+      where:{
+        userId: userId,
+      }
+    });
+
+    if(!storedToken){
+      throw new BadRequestException("Refresh token not found in database!");
+    }
+
+    const isRefreshTokenValid = await bcrypt.compare(refreshToken, storedToken.token);
+
+    if(!isRefreshTokenValid){
+      throw new BadRequestException("Invalid refresh token!");
+    }
+
+    if(storedToken.expiresAt < new Date()){
+      await this.prisma.refreshToken.delete({
+        where: { id: storedToken.id }
+      });
+      throw new BadRequestException("Refresh token has expired!");
+    }
+
+    await this.prisma.refreshToken.delete({
+      where: { id: storedToken.id }
+    });
+    
+    const payload = {
+      sub: currentUser.id,
+      name: currentUser.name,
+      email: currentUser.email,
+      role: currentUser.role
+    };
+
+    const tokens = await this.generateTokens(payload, currentUser.id);
+    
+    return {
+      message: "Tokens refreshed successfully!",
+      ...tokens
+    };
+    
+  }
+
+  async logout(userId: string){
+    await this.prisma.refreshToken.deleteMany({
+      where:{
+        userId: userId
+      }
+    });
+    return {
+      message: "User logged out successfully!"
+    }
+  }
 }
