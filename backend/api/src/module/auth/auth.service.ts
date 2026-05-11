@@ -52,6 +52,10 @@ export class AuthService {
       throw new BadRequestException("This user doesn't exist!");
     }
 
+    if(!user.isActive){
+      throw new BadRequestException("This user is not active!");
+    }
+
     const isPasswordValid = await bcrypt.compare(
       loginAuthDto.password,
       user.password

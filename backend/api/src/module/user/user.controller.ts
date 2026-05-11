@@ -26,4 +26,10 @@ export class UserController {
   updatePassword(@CurrentUser() user: any, @Body() data: UpdatePasswordDto){
     return this.userService.updatePassword(user.sub, data);
   }
+
+  @Patch('delete-me')
+  @UseGuards(JwtAuthGuard)
+  deactivateMe(@CurrentUser() user: any){
+    return this.userService.deactivateMe(user.sub);
+  }
 }
