@@ -109,4 +109,24 @@ export class UserService {
       message: "Password updated successfully"
     };
   }
+
+  async deactivateMe(userId: string){
+    return{
+      message: "User deleted successfully",
+      user: await this.prisma.user.update({
+      where:{
+        id: userId
+      },
+      data:{
+        isActive: false
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isActive: true,
+      }
+    })
+    }
+  }
 }
