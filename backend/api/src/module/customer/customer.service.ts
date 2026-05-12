@@ -32,4 +32,30 @@ export class CustomerService {
     
   }
 
+  async getCustomerProfile(userId: string){
+    const customerProfile = await this.prisma.customerProfile.findUnique({
+      where: {
+        userId: userId
+      },
+      include:{
+        user:{
+          select:{
+            name: true,
+            email: true
+          }
+        },
+        addresses:true
+      }
+    });
+
+    if (!customerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    }
+
+    return {
+      message: 'Customer profile fetched successfully',
+      data: customerProfile
+    }
+  }
+
 }

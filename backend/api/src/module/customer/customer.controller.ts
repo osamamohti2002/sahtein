@@ -14,6 +14,11 @@ export class CustomerController {
   @UseGuards(JwtAuthGuard)
   createCustomerProfile(@CurrentUser() user: any, @Body() data: CreateCustomerProfileDto){
     return this.customerService.createCustomerProfile(user.sub, data);
+  }
 
+  @Get('get-customer-profile')
+  @UseGuards(JwtAuthGuard)
+  getCustomerProfile(@CurrentUser() user: any){
+    return this.customerService.getCustomerProfile(user.sub);
   }
 }
