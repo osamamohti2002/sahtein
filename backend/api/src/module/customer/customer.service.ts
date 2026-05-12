@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateCustomerProfileDto } from './dto/create-customer-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 
 @Injectable()
 export class CustomerService {
@@ -55,6 +56,44 @@ export class CustomerService {
     return {
       message: 'Customer profile fetched successfully',
       data: customerProfile
+    }
+  }
+
+  async updateCustomerProfile(userId: string, data: UpdateCustomerProfileDto){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    }
+
+    if(data.phoneNumber){
+      const existingPhoneNumber = await this.prisma.customerProfile.findUnique({
+        where:{
+          phoneNumber: data.phoneNumber
+        }
+      });
+
+      if(existingPhoneNumber && existingPhoneNumber.userId !== userId){
+        throw new BadRequestException('Phone number already exists');
+      }
+    }
+
+    const updatedCustomerProfile = await this.prisma.customerProfile.update({
+      where:{
+        userId: userId
+      },
+      data:{
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl,
+      }
+    });
+    return {
+      message: 'Customer profile updated successfully',
+      data: updatedCustomerProfile
     }
   }
 
