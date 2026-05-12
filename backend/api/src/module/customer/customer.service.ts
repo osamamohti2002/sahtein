@@ -1,26 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CreateCustomerProfileDto } from './dto/create-customer-profile.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class CustomerService {
-  create(createCustomerDto: CreateCustomerDto) {
-    return 'This action adds a new customer';
+
+  constructor(private readonly prisma: PrismaService){}
+
+  async createCustomerProfile(userId: string, data: CreateCustomerProfileDto) {
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(existingCustomerProfile){
+      throw new BadRequestException('Customer profile already exists');
+    }
+
+    const newCustomerProfile = await this.prisma.customerProfile.create({
+      data:{
+        userId: userId,
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl,
+      }
+    });
+    return {
+      message: 'Customer profile created successfully',
+      data: newCustomerProfile
+    }
+    
   }
 
-  findAll() {
-    return `This action returns all customer`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} customer`;
-  }
-
-  update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    return `This action updates a #${id} customer`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} customer`;
-  }
 }
