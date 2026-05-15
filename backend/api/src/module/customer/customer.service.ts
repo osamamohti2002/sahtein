@@ -263,4 +263,59 @@ export class CustomerService {
       data: addresses
     };
   }
+
+  async setDefaultAddress(userId: string, addressId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to set this address as default')
+    };
+    
+    if (existingAddress.isDefault) {
+      return {
+        message: 'Address is already set as default'
+      };
+    }
+
+    await this.prisma.address.updateMany({
+      where:{
+        customerProfileID: existingCustomerProfile.id,
+        isDefault: true
+      },
+      data:{
+        isDefault: false
+      }
+    });
+
+    await this.prisma.address.update({
+      where:{
+        id: addressId
+      },
+      data:{
+        isDefault: true
+      }
+    });
+
+    return {
+      message: 'Address set as default successfully'
+    };
+  }
 }

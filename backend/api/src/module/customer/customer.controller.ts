@@ -52,4 +52,10 @@ export class CustomerController {
   getAllAddresses(@CurrentUser() user: any){
     return this.customerService.getAllAddresses(user.sub);
   }
+
+  @Patch('set-default-address/:addressId')
+  @UseGuards(JwtAuthGuard)
+  setDefaultAddress(@CurrentUser() user: any, @Param('addressId') addressId: string){
+    return this.customerService.setDefaultAddress(user.sub, addressId);
+  }
 }
