@@ -46,4 +46,10 @@ export class CustomerController {
   deleteAddress(@CurrentUser() user: any, @Param('addressId') addressId: string){
     return this.customerService.deleteAddress(user.sub, addressId);
   }
+
+  @Get('get-all-addresses')
+  @UseGuards(JwtAuthGuard)
+  getAllAddresses(@CurrentUser() user: any){
+    return this.customerService.getAllAddresses(user.sub);
+  }
 }

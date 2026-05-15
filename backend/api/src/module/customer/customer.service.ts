@@ -240,4 +240,27 @@ export class CustomerService {
       message: 'Address deleted successfully'
     };
   }
+
+  async getAllAddresses(userId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const addresses = await this.prisma.address.findMany({
+      where:{
+        customerProfileID: existingCustomerProfile.id
+      }
+    });
+
+    return {
+      message: 'Addresses fetched successfully',
+      data: addresses
+    };
+  }
 }
