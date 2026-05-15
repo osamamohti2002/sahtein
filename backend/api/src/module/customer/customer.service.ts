@@ -1,26 +1,321 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CreateCustomerProfileDto } from './dto/create-customer-profile.dto';
+import { PrismaService } from '../prisma/prisma.service';
+import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
+import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Injectable()
 export class CustomerService {
-  create(createCustomerDto: CreateCustomerDto) {
-    return 'This action adds a new customer';
+
+  constructor(private readonly prisma: PrismaService){}
+
+  async createCustomerProfile(userId: string, data: CreateCustomerProfileDto) {
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(existingCustomerProfile){
+      throw new BadRequestException('Customer profile already exists');
+    }
+
+    const newCustomerProfile = await this.prisma.customerProfile.create({
+      data:{
+        userId: userId,
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl,
+      }
+    });
+    return {
+      message: 'Customer profile created successfully',
+      data: newCustomerProfile
+    }
+    
   }
 
-  findAll() {
-    return `This action returns all customer`;
+  async getCustomerProfile(userId: string){
+    const customerProfile = await this.prisma.customerProfile.findUnique({
+      where: {
+        userId: userId
+      },
+      include:{
+        user:{
+          select:{
+            name: true,
+            email: true
+          }
+        },
+        addresses:true
+      }
+    });
+
+    if (!customerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    }
+
+    return {
+      message: 'Customer profile fetched successfully',
+      data: customerProfile
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} customer`;
+  async updateCustomerProfile(userId: string, data: UpdateCustomerProfileDto){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    }
+
+    if(data.phoneNumber){
+      const existingPhoneNumber = await this.prisma.customerProfile.findUnique({
+        where:{
+          phoneNumber: data.phoneNumber
+        }
+      });
+
+      if(existingPhoneNumber && existingPhoneNumber.userId !== userId){
+        throw new BadRequestException('Phone number already exists');
+      }
+    }
+
+    const updatedCustomerProfile = await this.prisma.customerProfile.update({
+      where:{
+        userId: userId
+      },
+      data:{
+        phoneNumber: data.phoneNumber,
+        avatarUrl: data.avatarUrl,
+      }
+    });
+    return {
+      message: 'Customer profile updated successfully',
+      data: updatedCustomerProfile
+    }
   }
 
-  update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    return `This action updates a #${id} customer`;
+  async addAddress(userId: string, data: CreateAddressDto){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    if(data.isDefault){
+      await this.prisma.address.updateMany({
+        where:{
+          customerProfileID: existingCustomerProfile.id,
+          isDefault: true
+        },
+        data:{
+          isDefault: false
+        }
+      });
+    };
+
+    const newAddress = await this.prisma.address.create({
+      data:{
+        customerProfileID: existingCustomerProfile.id,
+        ...data
+      }
+    });
+
+    return {
+      message: 'Address added successfully',
+      data: newAddress
+    };
+
+
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} customer`;
+  async updateAddress(userId: string, addressId: string, data: UpdateAddressDto){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to update this address')
+    };
+
+    if(data.isDefault){
+      await this.prisma.address.updateMany({
+        where:{
+          customerProfileID: existingCustomerProfile.id,
+          isDefault: true
+        },
+        data:{
+          isDefault: false
+        }
+      });
+    };
+
+    const updatedAddress = await this.prisma.address.update({
+      where:{
+        id: addressId
+      },
+      data:{
+        ...data
+      }
+    });
+
+    return {
+      message: 'Address updated successfully',
+      data: updatedAddress
+    };
+  }
+
+  async deleteAddress(userId: string, addressId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to delete this address')
+    };
+
+    if (existingAddress.isDefault) {
+      const anotherAddress = await this.prisma.address.findFirst({
+        where: {
+          customerProfileID: existingCustomerProfile.id,
+          id: { not: addressId }
+        }
+      });
+
+      if (anotherAddress) {
+        await this.prisma.address.update({
+          where: { id: anotherAddress.id },
+          data: { isDefault: true }
+        });
+      }
+    }
+
+    await this.prisma.address.delete({
+      where:{
+        id: addressId
+      }
+    });
+
+    return {
+      message: 'Address deleted successfully'
+    };
+  }
+
+  async getAllAddresses(userId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const addresses = await this.prisma.address.findMany({
+      where:{
+        customerProfileID: existingCustomerProfile.id
+      }
+    });
+
+    return {
+      message: 'Addresses fetched successfully',
+      data: addresses
+    };
+  }
+
+  async setDefaultAddress(userId: string, addressId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to set this address as default')
+    };
+    
+    if (existingAddress.isDefault) {
+      return {
+        message: 'Address is already set as default'
+      };
+    }
+
+    await this.prisma.address.updateMany({
+      where:{
+        customerProfileID: existingCustomerProfile.id,
+        isDefault: true
+      },
+      data:{
+        isDefault: false
+      }
+    });
+
+    await this.prisma.address.update({
+      where:{
+        id: addressId
+      },
+      data:{
+        isDefault: true
+      }
+    });
+
+    return {
+      message: 'Address set as default successfully'
+    };
   }
 }
