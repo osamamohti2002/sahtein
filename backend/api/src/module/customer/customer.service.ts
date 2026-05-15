@@ -188,4 +188,56 @@ export class CustomerService {
       data: updatedAddress
     };
   }
+
+  async deleteAddress(userId: string, addressId: string){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to delete this address')
+    };
+
+    if (existingAddress.isDefault) {
+      const anotherAddress = await this.prisma.address.findFirst({
+        where: {
+          customerProfileID: existingCustomerProfile.id,
+          id: { not: addressId }
+        }
+      });
+
+      if (anotherAddress) {
+        await this.prisma.address.update({
+          where: { id: anotherAddress.id },
+          data: { isDefault: true }
+        });
+      }
+    }
+
+    await this.prisma.address.delete({
+      where:{
+        id: addressId
+      }
+    });
+
+    return {
+      message: 'Address deleted successfully'
+    };
+  }
 }
