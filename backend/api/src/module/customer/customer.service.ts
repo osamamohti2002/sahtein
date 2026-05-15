@@ -3,6 +3,7 @@ import { CreateCustomerProfileDto } from './dto/create-customer-profile.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Injectable()
 export class CustomerService {
@@ -134,5 +135,57 @@ export class CustomerService {
     };
 
 
+  }
+
+  async updateAddress(userId: string, addressId: string, data: UpdateAddressDto){
+    const existingCustomerProfile = await this.prisma.customerProfile.findUnique({
+      where:{
+        userId: userId
+      }
+    });
+
+    if(!existingCustomerProfile){
+      throw new BadRequestException('Customer Profile Not Found')
+    };
+
+    const existingAddress = await this.prisma.address.findUnique({
+      where:{
+        id: addressId
+      }
+    });
+
+    if(!existingAddress){
+      throw new BadRequestException('Address Not Found')
+    };
+
+    if(existingAddress.customerProfileID !== existingCustomerProfile.id){
+      throw new BadRequestException('You are not authorized to update this address')
+    };
+
+    if(data.isDefault){
+      await this.prisma.address.updateMany({
+        where:{
+          customerProfileID: existingCustomerProfile.id,
+          isDefault: true
+        },
+        data:{
+          isDefault: false
+        }
+      });
+    };
+
+    const updatedAddress = await this.prisma.address.update({
+      where:{
+        id: addressId
+      },
+      data:{
+        ...data
+      }
+    });
+
+    return {
+      message: 'Address updated successfully',
+      data: updatedAddress
+    };
   }
 }

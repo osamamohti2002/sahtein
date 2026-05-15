@@ -5,6 +5,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { CreateCustomerProfileDto } from './dto/create-customer-profile.dto';
 import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
+import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Controller('customer')
 export class CustomerController {
@@ -32,6 +33,12 @@ export class CustomerController {
   @UseGuards(JwtAuthGuard)
   addAddress(@CurrentUser() user: any, @Body() data: CreateAddressDto){
     return this.customerService.addAddress(user.sub, data);
+  }
+
+  @Patch('update-address/:addressId')
+  @UseGuards(JwtAuthGuard)
+  updateAddress(@CurrentUser() user: any, @Param('addressId') addressId: string, @Body() data: UpdateAddressDto){
+    return this.customerService.updateAddress(user.sub, addressId, data);
   }
 
 }
